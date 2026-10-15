@@ -403,7 +403,16 @@ Authentication and API foundation tests should cover:
 - Consistent error response formats.
 - Existing health endpoint behavior.
 
-Use Jest and Supertest for automated API tests.
+Use Jest and Supertest for automated API tests. Phase 9 hardening coverage should include:
+
+- Validation boundaries for pagination, path parameters, and strict request bodies; rejected requests must not invoke the service layer.
+- JWT signature integrity in addition to missing, malformed, and expired-token cases.
+- Authentication response hygiene: normalized email input, no client-controlled role, and no password/hash fields in authentication responses.
+- Borrowing API validation and stable translation of known service errors (for example, an unavailable copy returns `409 COPY_UNAVAILABLE`).
+- Standard summary/error envelopes when an unexpected service failure occurs, without returning internal error details.
+- Database integration tests for borrowing issue/return behavior and database constraints, run only against a dedicated test database. Never point integration tests at development or production data.
+
+Run the regular suite with `npm test -- --runInBand`. Run borrowing database integration tests separately with `npm run test:integration` after configuring the dedicated test database.
 
 ---
 

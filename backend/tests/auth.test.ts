@@ -3,6 +3,18 @@ import request from "supertest";
 import { authRouter } from "../src/modules/auth/auth.routes";
 import { AuthServiceError, authService } from "../src/modules/auth/auth.service";
 
+const authResponse = {
+  user: {
+    id: "a1b2c3d4-e5f6-4789-8123-123456789abc",
+    name: "Test Student",
+    email: "student@example.com",
+    role: "STUDENT",
+  },
+  access_token: "signed-token",
+  token_type: "Bearer",
+  expires_in: 3600,
+} as const;
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -15,18 +27,6 @@ function createApp() {
 
 describe("authentication API", () => {
   const app = createApp();
-  const authResponse = {
-    user: {
-      id: "a1b2c3d4-e5f6-4789-8123-123456789abc",
-      name: "Test Student",
-      email: "student@example.com",
-      role: "STUDENT",
-    },
-    access_token: "signed-token",
-    token_type: "Bearer",
-    expires_in: 3600,
-  } as const;
-
   afterEach(() => jest.restoreAllMocks());
 
   it("registers a student and returns 201 without a password hash", async () => {
@@ -98,5 +98,21 @@ describe("authentication API", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("INVALID_CREDENTIALS");
+  });
+});
+
+describe("authentication hardening regressions", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("normalizes email before passing registration data to the service", async () => {
+    const registerSpy = jest.spyOn(authService, "register").mockResolvedValue(authResponse);
+    const response = await request(createApp())
+      .post("/api/v1/auth/register")
+      .send({ name: "Test Student", email: "  STUDENT@EXAMPLE.COM  ", password: "password123" });
+
+    expect(response.status).toBe(201);
+    expect(registerSpy).toHaveBeenCalledWith({ name: "Test Student", email: "student@example.com", password: "password123" });
+    expect(response.body.data.user).not.toHaveProperty("passwordHash");
+    expect(response.body.data.user).not.toHaveProperty("password_hash");
   });
 });

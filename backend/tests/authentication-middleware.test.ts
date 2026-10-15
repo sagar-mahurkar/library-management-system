@@ -71,3 +71,16 @@ describe("authenticate middleware", () => {
     expect(response.body.data).toEqual({ userId: "a1b2c3d4-e5f6-4789-8123-123456789abc", role: "STUDENT" });
   });
 });
+
+describe("authenticate middleware token integrity", () => {
+  it("rejects a correctly formed token signed with a different secret", async () => {
+    const token = jwt.sign(
+      { role: "STUDENT" },
+      "a-different-secret-that-is-also-long-enough-for-testing",
+      { subject: "a1b2c3d4-e5f6-4789-8123-123456789abc", expiresIn: "1h", issuer: "library-management-system", audience: "library-management-api" },
+    );
+    const response = await request(createApp()).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe("INVALID_TOKEN");
+  });
+});

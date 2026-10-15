@@ -63,3 +63,12 @@ describe("authorizeRole middleware", () => {
     }
   });
 });
+
+describe("authorizeRole denial regression", () => {
+  it("does not allow a student through a librarian-only route", async () => {
+    const response = await request(createApp()).get("/librarian").set("Authorization", `Bearer ${token("STUDENT")}`);
+    expect(response.status).toBe(403);
+    expect(response.body.data).toBeUndefined();
+    expect(response.body.error.code).toBe("FORBIDDEN");
+  });
+});
