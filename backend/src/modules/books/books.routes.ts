@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/authenticate";
+import { authorizeRole } from "../../middleware/authorize-role";
+import { createBook, deleteBook, getBook, listBooks, updateBook } from "./books.controller";
+export const booksRouter = Router();
+booksRouter.get("/", listBooks);
+booksRouter.get("/:id", getBook);
+booksRouter.post("/", authenticate, authorizeRole("LIBRARIAN"), createBook);
+booksRouter.patch("/:id", authenticate, authorizeRole("LIBRARIAN"), updateBook);
+booksRouter.delete("/:id", authenticate, authorizeRole("LIBRARIAN"), deleteBook);

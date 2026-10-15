@@ -244,61 +244,93 @@ Authentication identifies the user; authorization determines whether the user ma
 
 ---
 
-## 7. Planned Feature APIs
+## 7. Feature APIs
 
-The following endpoints describe the planned API surface for later phases. They are contracts for future implementation, not a claim that these endpoints already exist.
+The following feature endpoints are implemented in Phase 7. All successful responses use a `data` envelope; paginated list endpoints also return `meta`.
 
-### 7.1 Books and Authors
-
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/api/v1/books` | Public | Browse books |
-| `GET` | `/api/v1/books/:id` | Public | View book details |
-| `POST` | `/api/v1/books` | Librarian | Create a book and associate authors |
-| `PATCH` | `/api/v1/books/:id` | Librarian | Update book details |
-| `DELETE` | `/api/v1/books/:id` | Librarian | Delete a book when permitted by data-integrity rules |
-| `GET` | `/api/v1/authors` | Public | Browse authors |
-| `POST` | `/api/v1/authors` | Librarian | Create an author |
-| `PATCH` | `/api/v1/authors/:id` | Librarian | Update an author |
-| `DELETE` | `/api/v1/authors/:id` | Librarian | Delete an author when permitted by foreign-key rules |
-
-### 7.2 Physical Book Copies
+### 7.1 Books
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/v1/books/:id/copies` | Public | View copies and availability |
-| `POST` | `/api/v1/books/:id/copies` | Librarian | Add a physical copy |
-| `DELETE` | `/api/v1/copies/:id` | Librarian | Remove a copy when permitted by borrowing-history constraints |
+| `GET` | `/api/v1/books` | Public | Browse books; optional `search`, `page`, `limit` |
+| `GET` | `/api/v1/books/:id` | Public | View book details, authors, and copy counts |
+| `POST` | `/api/v1/books` | Librarian | Create a book and associate one or more author IDs |
+| `PATCH` | `/api/v1/books/:id` | Librarian | Update supplied book fields and/or author IDs |
+| `DELETE` | `/api/v1/books/:id` | Librarian | Delete only when the book has no physical copies |
 
-### 7.3 Student Records
+Create body: `title` (required), `authorIds` (required non-empty UUID array), and optional `isbn`, `publisher`, `publicationYear`. `isbn` and `publisher` may be `null`. Update accepts one or more of the same fields. ISBN uniqueness is enforced by the database. A book cannot be deleted while copies exist.
+
+Book list response shape:
+
+```json
+{
+  "data": [{
+    "id": "uuid",
+    "title": "Clean Code",
+    "isbn": null,
+    "publisher": null,
+    "publicationYear": null,
+    "authors": [],
+    "totalCopies": 0,
+    "availableCopies": 0,
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }],
+  "meta": { "page": 1, "limit": 20, "total": 1 }
+}
+```
+
+### 7.2 Authors
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/v1/students` | Librarian | List student records |
+| `GET` | `/api/v1/authors` | Public | Browse authors; optional `search`, `page`, `limit` |
+| `GET` | `/api/v1/authors/:id` | Public | View an author |
+| `POST` | `/api/v1/authors` | Librarian | Create an author (`name`) |
+| `PATCH` | `/api/v1/authors/:id` | Librarian | Update author name |
+| `DELETE` | `/api/v1/authors/:id` | Librarian | Delete only when no book association exists |
+
+### 7.3 Physical Book Copies
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/books/:bookId/copies` | Public | List copies and availability |
+| `POST` | `/api/v1/books/:bookId/copies` | Librarian | Add a copy using `copyCode` |
+| `DELETE` | `/api/v1/copies/:id` | Librarian | Delete only when no borrowing history exists |
+
+A copy is available when it has no borrowing record with `returned_at IS NULL`. `copyCode` must be unique.
+
+### 7.4 Student Records
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/students` | Librarian | List students; optional `search`, `page`, `limit` |
 | `GET` | `/api/v1/students/:id` | Librarian | View a student record |
 
-Student account creation is covered by public registration. Additional account-management operations should be defined only when required by the approved scope.
+Only records with role `STUDENT` are returned. Password hashes are never included. Student registration remains public through the authentication API; public registration cannot assign the librarian role.
 
-### 7.4 Borrowings
+### 7.5 Borrowings
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/borrowings` | Librarian | Issue an available physical copy to a student |
+| `POST` | `/api/v1/borrowings` | Librarian | Issue an available physical copy |
 | `PATCH` | `/api/v1/borrowings/:id/return` | Librarian | Record a return |
-| `GET` | `/api/v1/borrowings/me` | Student | View own borrowing records |
-| `GET` | `/api/v1/students/:id/borrowings` | Librarian | View a student's borrowing records |
+| `GET` | `/api/v1/borrowings/me` | Authenticated | View the authenticated user's own history |
+| `GET` | `/api/v1/students/:studentId/borrowings` | Librarian | View a student's history |
 
-The backend must prevent a physical copy from being issued to multiple users simultaneously. Issuing and returning must preserve database integrity and borrowing history.
+Issue body: `studentId`, `bookCopyId`, and `dueAt` (ISO-8601 datetime with timezone). The due date must be in the future. Issuing and returning use database transactions; copy rows and borrowing rows are locked where needed. The database partial unique index on active borrowings is the final safeguard against duplicate concurrent issues. Repeated returns return `409 ALREADY_RETURNED`.
 
-### 7.5 Summary
+Borrowing list endpoints accept `page`, `limit`, and `status` (`all`, `active`, `overdue`, or `returned`). Overdue is derived from an unreturned borrowing whose due timestamp has passed.
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/api/v1/summary` | Librarian | Retrieve basic library summary statistics |
+### 7.6 Feature Error Codes
 
-Summary values must be derived from persisted database records.
-
----
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `400` | `VALIDATION_ERROR` | Invalid request payload, path parameter, or query |
+| `400` | `AUTHOR_NOT_FOUND` | A referenced author does not exist |
+| `400` | `INVALID_DUE_DATE` | Due date is not in the future |
+| `404` | `BOOK_NOT_FOUND` / `AUTHOR_NOT_FOUND` / `STUDENT_NOT_FOUND` / `COPY_NOT_FOUND` / `BORROWING_NOT_FOUND` | Requested resource is absent |
+| `409` | `BOOK_CONFLICT` / `BOOK_HAS_COPIES` / `AUTHOR_IN_USE` / `COPY_CODE_ALREADY_EXISTS` / `COPY_HAS_HISTORY` / `COPY_UNAVAILABLE` / `ALREADY_RETURNED` | Database or business rule conflict |
 
 ## 8. Standard HTTP Status Codes
 

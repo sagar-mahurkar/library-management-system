@@ -1,0 +1,9 @@
+import type { NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
+import { BorrowingsServiceError, borrowingsService } from "./borrowings.service";
+import { borrowingIdParamsSchema, issueBorrowingSchema, listBorrowingsQuerySchema, studentBorrowingsParamsSchema } from "./borrowings.schemas";
+function fail(error: unknown, res: Response, next: NextFunction): void { if (error instanceof ZodError) { res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: error.issues } }); return; } if (error instanceof BorrowingsServiceError) { res.status(error.statusCode).json({ error: { code: error.code, message: error.message } }); return; } next(error); }
+export async function issueBorrowing(req: Request, res: Response, next: NextFunction) { try { res.status(201).json({ data: await borrowingsService.issue(issueBorrowingSchema.parse(req.body)) }); } catch (e) { fail(e, res, next); } }
+export async function returnBorrowing(req: Request, res: Response, next: NextFunction) { try { const { id } = borrowingIdParamsSchema.parse(req.params); res.status(200).json({ data: await borrowingsService.return(id) }); } catch (e) { fail(e, res, next); } }
+export async function getMyBorrowings(req: Request, res: Response, next: NextFunction) { try { res.status(200).json(await borrowingsService.listForStudent(req.auth!.userId, listBorrowingsQuerySchema.parse(req.query))); } catch (e) { fail(e, res, next); } }
+export async function getStudentBorrowings(req: Request, res: Response, next: NextFunction) { try { const { studentId } = studentBorrowingsParamsSchema.parse(req.params); res.status(200).json(await borrowingsService.listForStudent(studentId, listBorrowingsQuerySchema.parse(req.query))); } catch (e) { fail(e, res, next); } }
