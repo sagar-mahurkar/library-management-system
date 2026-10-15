@@ -12,3 +12,19 @@ describe("book copies API", () => {
   it("allows librarians to add a copy", async () => { service.create.mockResolvedValue({ id: "2c90f4b0-2c83-4f19-bdf0-3f777d2a4023", bookId, copyCode: "CC-001" } as never); const res = await request(app).post(`/api/v1/books/${bookId}/copies`).set("Authorization", `Bearer ${token}`).send({ copyCode: "CC-001" }); expect(res.status).toBe(201); });
   it("rejects blank copy codes", async () => { const res = await request(app).post(`/api/v1/books/${bookId}/copies`).set("Authorization", `Bearer ${token}`).send({ copyCode: " " }); expect(res.status).toBe(400); });
 });
+
+describe("book copies API validation regressions", () => {
+  it("rejects a malformed book ID before calling the service", async () => {
+    const response = await request(app).get("/api/v1/books/not-a-uuid/copies");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.list).not.toHaveBeenCalled();
+  });
+
+  it("rejects extra fields when creating a copy", async () => {
+    const response = await request(app).post(`/api/v1/books/${bookId}/copies`).set("Authorization", `Bearer ${token}`).send({ copyCode: "CC-002", available: true });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.create).not.toHaveBeenCalled();
+  });
+});

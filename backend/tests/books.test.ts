@@ -25,3 +25,19 @@ describe("books API", () => {
   it("requires librarian role to create a book", async () => { const res = await request(app).post("/api/v1/books").set("Authorization", `Bearer ${studentToken()}`).send({ title: "Clean Code", authorIds: ["2c90f4b0-2c83-4f19-bdf0-3f777d2a4004"] }); expect(res.status).toBe(403); expect(service.create).not.toHaveBeenCalled(); });
   it("validates create payloads", async () => { const res = await request(app).post("/api/v1/books").set("Authorization", `Bearer ${librarianToken()}`).send({ title: "", authorIds: [] }); expect(res.status).toBe(400); expect(res.body.error.code).toBe("VALIDATION_ERROR"); });
 });
+
+describe("books API validation regressions", () => {
+  it("rejects a page limit above the supported maximum before calling the service", async () => {
+    const response = await request(app).get("/api/v1/books?limit=101");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.list).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed book ID before calling the service", async () => {
+    const response = await request(app).get("/api/v1/books/not-a-uuid");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.getById).not.toHaveBeenCalled();
+  });
+});

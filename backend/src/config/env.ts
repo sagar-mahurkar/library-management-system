@@ -9,6 +9,7 @@ const envSchema = z.object({
   DATABASE_HOST: z.string().min(1),
   DATABASE_PORT: z.coerce.number().int().min(1).max(65535),
   DATABASE_NAME: z.string().min(1),
+  DATABASE_TEST_NAME: z.string().min(1).default("library_management_test"),
   DATABASE_USER: z.string().min(1),
   DATABASE_PASSWORD: z.string().min(1),
 

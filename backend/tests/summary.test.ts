@@ -53,3 +53,13 @@ describe("summary API", () => {
     expect(service.getSummary).not.toHaveBeenCalled();
   });
 });
+
+describe("summary API failure handling", () => {
+  it("returns the standard internal error envelope when the service fails unexpectedly", async () => {
+    service.getSummary.mockRejectedValue(new Error("database connection details should not be returned"));
+    const response = await request(app).get("/api/v1/summary").set("Authorization", `Bearer ${librarianToken()}`);
+    expect(response.status).toBe(500);
+    expect(response.body.error.code).toBe("INTERNAL_SERVER_ERROR");
+    expect(typeof response.body.error.message).toBe("string");
+  });
+});

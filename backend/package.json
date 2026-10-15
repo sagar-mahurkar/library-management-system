@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "migration:run": "tsx -e \"import { AppDataSource } from './src/config/data-source'; AppDataSource.initialize().then(async () => { try { await AppDataSource.runMigrations(); } finally { await AppDataSource.destroy(); } }).catch((error) => { console.error(error); process.exitCode = 1; });\""
+    "migration:run": "tsx -e \"import { AppDataSource } from './src/config/data-source'; AppDataSource.initialize().then(async () => { try { await AppDataSource.runMigrations(); } finally { await AppDataSource.destroy(); } }).catch((error) => { console.error(error); process.exitCode = 1; });\"",
+    "test:integration": "RUN_DB_INTEGRATION_TESTS=true jest --runInBand tests/borrowing-integrity.integration.test.ts"
   },
   "keywords": [],
   "author": "",

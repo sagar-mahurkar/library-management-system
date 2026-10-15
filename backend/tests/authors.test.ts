@@ -11,3 +11,19 @@ describe("authors API", () => {
   it("creates an author for librarians", async () => { service.create.mockResolvedValue({ id: "2c90f4b0-2c83-4f19-bdf0-3f777d2a4012", name: "Robert Martin" } as never); const res = await request(app).post("/api/v1/authors").set("Authorization", `Bearer ${token}`).send({ name: "Robert Martin" }); expect(res.status).toBe(201); expect(service.create).toHaveBeenCalledWith({ name: "Robert Martin" }); });
   it("rejects invalid author IDs", async () => { const res = await request(app).get("/api/v1/authors/not-a-uuid"); expect(res.status).toBe(400); });
 });
+
+describe("authors API validation regressions", () => {
+  it("rejects an out-of-range page limit before calling the service", async () => {
+    const response = await request(app).get("/api/v1/authors?limit=101");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.list).not.toHaveBeenCalled();
+  });
+
+  it("rejects an extra field in the create payload", async () => {
+    const response = await request(app).post("/api/v1/authors").set("Authorization", `Bearer ${token}`).send({ name: "Robert Martin", role: "LIBRARIAN" });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(service.create).not.toHaveBeenCalled();
+  });
+});
