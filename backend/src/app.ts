@@ -5,8 +5,12 @@ import helmet from "helmet";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error-handler";
 import { notFound } from "./middleware/not-found";
+import { authRouter } from "./modules/auth/auth.routes";
+
 
 const app = express();
+
+app.use("/api/v1/auth", authRouter);
 
 app.disable("x-powered-by");
 
