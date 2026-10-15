@@ -12,6 +12,9 @@
     "resolveJsonModule": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
     "isolatedModules": true,
     "types": ["node", "jest"]
   },
