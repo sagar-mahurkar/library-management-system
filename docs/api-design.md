@@ -322,7 +322,33 @@ Issue body: `studentId`, `bookCopyId`, and `dueAt` (ISO-8601 datetime with timez
 
 Borrowing list endpoints accept `page`, `limit`, and `status` (`all`, `active`, `overdue`, or `returned`). Overdue is derived from an unreturned borrowing whose due timestamp has passed.
 
-### 7.6 Feature Error Codes
+### 7.6 Librarian Summary
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/summary` | Librarian | Retrieve library-wide aggregate counts |
+
+**Authentication:** Required JWT. Only users with the `LIBRARIAN` role may access this endpoint.
+
+**Success — `200 OK`**
+
+```json
+{
+  "data": {
+    "totalBooks": 12,
+    "totalCopies": 30,
+    "availableCopies": 18,
+    "activeBorrowings": 12,
+    "overdueBorrowings": 3
+  }
+}
+```
+
+The values are computed from existing book, physical-copy, and borrowing records. A copy is available when it has no active borrowing. An active borrowing has `returned_at IS NULL`; an overdue borrowing is active and has `due_at < CURRENT_TIMESTAMP`. Overdue borrowings are included within active borrowings.
+
+**Errors:** `401 Unauthorized` for missing or invalid authentication; `403 Forbidden` when an authenticated student requests the summary. Unexpected errors use the standard error handler.
+
+### 7.7 Feature Error Codes
 
 | Status | Code | Meaning |
 | --- | --- | --- |
@@ -396,6 +422,6 @@ Use Jest and Supertest for automated API tests.
 
 Phase 6 implements the shared API foundation and authentication.
 
-Book and author management, physical-copy management, student record APIs, borrowing workflows, and summary APIs are planned for subsequent feature phases.
+Book and author management, physical-copy management, student record APIs, and borrowing workflows are implemented in Phase 7. The librarian summary API is implemented in Phase 8.
 
 The API contract must be updated when implementation decisions change. Documentation, validation schemas, automated tests, and endpoint behavior must remain consistent.

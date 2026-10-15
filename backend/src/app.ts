@@ -11,6 +11,7 @@ import { bookCopiesRouter } from "./modules/book-copies/book-copies.routes";
 import { booksRouter } from "./modules/books/books.routes";
 import { borrowingsRouter } from "./modules/borrowings/borrowings.routes";
 import { studentsRouter } from "./modules/students/students.routes";
+import { summaryRouter } from "./modules/summary/summary.routes";
 
 const app = express();
 app.disable("x-powered-by");
@@ -25,6 +26,7 @@ app.use("/api/v1/authors", authorsRouter);
 app.use("/api/v1", bookCopiesRouter);
 app.use("/api/v1/students", studentsRouter);
 app.use("/api/v1", borrowingsRouter);
+app.use("/api/v1/summary", summaryRouter);
 
 app.use(notFound);
 app.use(errorHandler);
