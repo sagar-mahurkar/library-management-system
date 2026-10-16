@@ -7,3 +7,5 @@ export async function issueBorrowing(req: Request, res: Response, next: NextFunc
 export async function returnBorrowing(req: Request, res: Response, next: NextFunction) { try { const { id } = borrowingIdParamsSchema.parse(req.params); res.status(200).json({ data: await borrowingsService.return(id) }); } catch (e) { fail(e, res, next); } }
 export async function getMyBorrowings(req: Request, res: Response, next: NextFunction) { try { res.status(200).json(await borrowingsService.listForStudent(req.auth!.userId, listBorrowingsQuerySchema.parse(req.query))); } catch (e) { fail(e, res, next); } }
 export async function getStudentBorrowings(req: Request, res: Response, next: NextFunction) { try { const { studentId } = studentBorrowingsParamsSchema.parse(req.params); res.status(200).json(await borrowingsService.listForStudent(studentId, listBorrowingsQuerySchema.parse(req.query))); } catch (e) { fail(e, res, next); } }
+
+export async function getAllBorrowings(req: Request, res: Response, next: NextFunction) { try { res.status(200).json(await borrowingsService.listAll(listBorrowingsQuerySchema.parse(req.query))); } catch (e) { fail(e, res, next); } }

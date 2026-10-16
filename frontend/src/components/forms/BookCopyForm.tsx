@@ -1,8 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { bookCopySchema, type BookCopyFormValues } from "../../schemas/book-copy.schema";
-import FormField from "../FormField";
-export default function BookCopyForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm<BookCopyFormValues>({ resolver: zodResolver(bookCopySchema) });
-  return <form onSubmit={handleSubmit(() => window.alert("UI preview only: copy changes are connected in Phase 12."))}><FormField label="Book ID" placeholder="Select/book ID" {...register("bookId")} error={errors.bookId?.message} /><FormField label="Copy code" placeholder="e.g. CC-005" {...register("copyCode")} error={errors.copyCode?.message} /><button className="btn btn-primary" type="submit">Add copy</button></form>;
-}
+import { useEffect, useState, type FormEvent } from "react";
+import { listBooks } from "../../services/booksService";
+import type { Book } from "../../types/book.types";
+import ErrorState from "../ErrorState";
+import LoadingState from "../LoadingState";
+interface Props { onSubmit: (bookId: string, copyCode: string) => Promise<void>; onCancel: () => void }
+export default function BookCopyForm({onSubmit,onCancel}:Props){const [books,setBooks]=useState<Book[]>([]);const [bookId,setBookId]=useState("");const [copyCode,setCopyCode]=useState("");const [error,setError]=useState("");const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);useEffect(()=>{let active=true;listBooks({limit:100}).then(r=>{if(active){setBooks(r.items);setBookId(r.items[0]?.id??"")}}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load books")}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[]);async function submit(e:FormEvent){e.preventDefault();setError("");if(!bookId||!copyCode.trim()){setError("Select a book and enter a copy code.");return}setSaving(true);try{await onSubmit(bookId,copyCode.trim())}catch(e){setError(e instanceof Error?e.message:"Unable to add copy")}finally{setSaving(false)}}if(loading)return <LoadingState label="Loading books…"/>;return <form onSubmit={submit}><div className="mb-3"><label className="form-label">Book</label><select className="form-select" value={bookId} onChange={e=>setBookId(e.target.value)} required><option value="">Select a book</option>{books.map(b=><option key={b.id} value={b.id}>{b.title}</option>)}</select></div><div className="mb-3"><label className="form-label">Copy code</label><input className="form-control" value={copyCode} onChange={e=>setCopyCode(e.target.value)} maxLength={50} placeholder="e.g. CC-005" required/></div>{error&&<ErrorState message={error}/>}<div className="d-flex justify-content-end gap-2"><button type="button" className="btn btn-outline-secondary" onClick={onCancel}>Cancel</button><button className="btn btn-primary" disabled={saving||books.length===0}>{saving?"Adding…":"Add copy"}</button></div></form>}

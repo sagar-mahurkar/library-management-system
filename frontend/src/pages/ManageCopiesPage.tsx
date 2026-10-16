@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BookCopyForm from "../components/forms/BookCopyForm";
 import PageHeader from "../components/PageHeader";
 import StatusBadge from "../components/StatusBadge";
-import { mockBooks } from "../data/mockData";
-const copies = mockBooks.flatMap(book => Array.from({ length: book.totalCopies }, (_, i) => ({ id: `${book.id}-copy-${i + 1}`, title: book.title, copyCode: `${book.title.split(" ").map(w => w[0]).join("").toUpperCase()}-${String(i + 1).padStart(3, "0")}`, available: i < book.availableCopies })));
-export default function ManageCopiesPage() {
-  const [showForm, setShowForm] = useState(false);
-  return <><PageHeader title="Physical copies" description="Track individual copies and their availability." action={<button className="btn btn-primary" onClick={() => setShowForm(v => !v)}><i className="bi bi-plus-lg me-2" />Add copy</button>} />
-    {showForm && <div className="card border-0 shadow-sm mb-4"><div className="card-body"><BookCopyForm /></div></div>}
-    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table align-middle mb-0"><thead><tr><th>Copy code</th><th>Book</th><th>Status</th></tr></thead><tbody>{copies.map(c => <tr key={c.id}><td className="fw-semibold">{c.copyCode}</td><td>{c.title}</td><td><StatusBadge status={c.available ? "AVAILABLE" : "UNAVAILABLE"} /></td></tr>)}</tbody></table></div></div></>;
-}
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+import { listBooks } from "../services/booksService";
+import { createBookCopy, deleteBookCopy, listBookCopies } from "../services/bookCopiesService";
+import { getApiErrorMessage } from "../services/apiHelpers";
+import type { Book, BookCopy } from "../types/book.types";
+interface Row extends BookCopy { title:string }
+export default function ManageCopiesPage(){const [rows,setRows]=useState<Row[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [open,setOpen]=useState(false);const [refresh,setRefresh]=useState(0);useEffect(()=>{let active=true;async function load(){setLoading(true);try{const books=(await listBooks({limit:100})).items;const groups=await Promise.all(books.map(async(book:Book)=>({book,copies:await listBookCopies(book.id)})));if(active)setRows(groups.flatMap(g=>g.copies.map(c=>({...c,title:g.book.title}))))}catch(e){if(active)setError(getApiErrorMessage(e))}finally{if(active)setLoading(false)}}void load();return()=>{active=false}},[refresh]);async function add(bookId:string,copyCode:string){await createBookCopy(bookId,copyCode);setOpen(false);setRefresh(v=>v+1)}async function remove(copy:Row){if(!window.confirm(`Delete copy ${copy.copyCode}?`))return;try{await deleteBookCopy(copy.id);setRefresh(v=>v+1)}catch(e){setError(getApiErrorMessage(e))}}return <><PageHeader title="Physical copies" description="Track individual copies and their availability." action={<button className="btn btn-primary" onClick={()=>setOpen(v=>!v)}><i className="bi bi-plus-lg me-2"/>Add copy</button>}/>{error&&<ErrorState message={error}/ >}{open&&<div className="card border-0 shadow-sm mb-4"><div className="card-body"><BookCopyForm onSubmit={add} onCancel={()=>setOpen(false)}/></div></div>}{loading?<LoadingState label="Loading physical copies…"/>:rows.length===0?<EmptyState title="No copies found" message="Add a physical copy to a book."/>:<div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table align-middle mb-0"><thead><tr><th>Copy code</th><th>Book</th><th>Status</th><th className="text-end">Actions</th></tr></thead><tbody>{rows.map(c=><tr key={c.id}><td className="fw-semibold">{c.copyCode}</td><td>{c.title}</td><td><StatusBadge status={c.available?"AVAILABLE":"UNAVAILABLE"}/></td><td className="text-end"><button className="btn btn-sm btn-outline-danger" onClick={()=>remove(c)}>Delete</button></td></tr>)}</tbody></table></div></div>}</>}

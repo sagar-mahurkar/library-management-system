@@ -315,6 +315,7 @@ Only records with role `STUDENT` are returned. Password hashes are never include
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/borrowings` | Librarian | Issue an available physical copy |
 | `PATCH` | `/api/v1/borrowings/:id/return` | Librarian | Record a return |
+| `GET` | `/api/v1/borrowings` | Librarian | List all borrowing records; optional `page`, `limit`, `status` |
 | `GET` | `/api/v1/borrowings/me` | Authenticated | View the authenticated user's own history |
 | `GET` | `/api/v1/students/:studentId/borrowings` | Librarian | View a student's history |
 

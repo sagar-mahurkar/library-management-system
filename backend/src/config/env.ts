@@ -14,7 +14,11 @@ const envSchema = z.object({
   DATABASE_PASSWORD: z.string().min(1),
 
   JWT_SECRET_KEY: z.string().min(32),
-  JWT_EXPIRES_IN: z.string().min(1).default("1h")
+  JWT_EXPIRES_IN: z.string().min(1).default("1h"),
+
+  INITIAL_LIBRARIAN_NAME: z.string().trim().min(1).optional(),
+  INITIAL_LIBRARIAN_EMAIL: z.email().optional(),
+  INITIAL_LIBRARIAN_PASSWORD: z.string().min(10).optional(),
 });
 
 const result = envSchema.safeParse(process.env);

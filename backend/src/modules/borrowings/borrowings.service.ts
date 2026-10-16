@@ -19,5 +19,6 @@ export class BorrowingsService {
   async issue(input: IssueBorrowingInput) { try { return normalize(await this.repository.issue(input)); } catch (error) { return translate(error); } }
   async return(id: string) { try { return normalize(await this.repository.returnBorrowing(id)); } catch (error) { return translate(error); } }
   async listForStudent(studentId: string, query: ListBorrowingsQuery) { const result = await this.repository.listForStudent(studentId, query); return { data: result.items.map(normalize), meta: { page: query.page, limit: query.limit, total: result.total } }; }
+  async listAll(query: ListBorrowingsQuery) { const result = await this.repository.listAll(query); return { data: result.items.map(normalize), meta: { page: query.page, limit: query.limit, total: result.total } }; }
 }
 export const borrowingsService = new BorrowingsService();
