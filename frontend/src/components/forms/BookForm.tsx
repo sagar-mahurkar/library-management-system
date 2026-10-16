@@ -1,31 +1,14 @@
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { bookSchema } from "../../schemas/book.schema";
-import FormField from "../FormField";
-export default function BookForm({ onCancel }: { onCancel?: () => void }) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<
-      z.input<typeof bookSchema>,
-      unknown,
-      z.output<typeof bookSchema>
-    >({
-    resolver: zodResolver(bookSchema),
-    defaultValues: {
-      title: "",
-      isbn: "",
-      publisher: "",
-      authorIds: [],
-    },
-  });
-  return <form onSubmit={handleSubmit(() => window.alert("UI preview only: book changes are connected in Phase 12."))}>
-    <FormField label="Title" placeholder="Book title" {...register("title")} error={errors.title?.message} />
-    <FormField label="ISBN" placeholder="Optional ISBN" {...register("isbn")} error={errors.isbn?.message} />
-    <FormField label="Publisher" placeholder="Publisher name" {...register("publisher")} error={errors.publisher?.message} />
-    <FormField label="Publication year" type="number" placeholder="e.g. 2024" {...register("publicationYear")} error={errors.publicationYear?.message} />
-    <div className="d-flex justify-content-end gap-2"><button type="button" className="btn btn-outline-secondary" onClick={onCancel}>Cancel</button><button className="btn btn-primary" type="submit">Save book</button></div>
-  </form>;
+import { useEffect, useState, type FormEvent } from "react";
+import { listAuthors } from "../../services/booksService";
+import type { Author, Book, BookInput } from "../../types/book.types";
+import ErrorState from "../ErrorState";
+import LoadingState from "../LoadingState";
+interface Props { initialBook?: Book; onSubmit: (input: BookInput) => Promise<void>; onCancel: () => void }
+export default function BookForm({ initialBook, onSubmit, onCancel }: Props) {
+ const [authors, setAuthors] = useState<Author[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
+ const [title,setTitle]=useState(initialBook?.title ?? ""); const [isbn,setIsbn]=useState(initialBook?.isbn ?? ""); const [publisher,setPublisher]=useState(initialBook?.publisher ?? ""); const [year,setYear]=useState(initialBook?.publicationYear?.toString() ?? ""); const [authorIds,setAuthorIds]=useState<string[]>(initialBook?.authors.map(a=>a.id) ?? []);
+ useEffect(()=>{ let active=true; listAuthors({limit:100}).then(r=>{if(active)setAuthors(r.items)}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load authors")}).finally(()=>{if(active)setLoading(false)}); return ()=>{active=false}; },[]);
+ async function submit(e: FormEvent) { e.preventDefault(); setError(""); if(!title.trim()){setError("Title is required.");return} if(authorIds.length===0){setError("Select at least one author.");return} setSaving(true); try { await onSubmit({title:title.trim(),isbn:isbn.trim()||undefined,publisher:publisher.trim()||undefined,publicationYear:year?Number(year):undefined,authorIds}); } catch(err) { setError(err instanceof Error?err.message:"Unable to save book") } finally {setSaving(false)} }
+ if(loading) return <LoadingState label="Loading authors…"/>;
+ return <form onSubmit={submit} className="row g-3"><div className="col-md-6"><label className="form-label">Title</label><input className="form-control" value={title} onChange={e=>setTitle(e.target.value)} maxLength={255} required/></div><div className="col-md-6"><label className="form-label">ISBN</label><input className="form-control" value={isbn} onChange={e=>setIsbn(e.target.value)} maxLength={20}/></div><div className="col-md-6"><label className="form-label">Publisher</label><input className="form-control" value={publisher} onChange={e=>setPublisher(e.target.value)} maxLength={150}/></div><div className="col-md-6"><label className="form-label">Publication year</label><input type="number" className="form-control" value={year} onChange={e=>setYear(e.target.value)} min="1000" max={new Date().getFullYear()+1}/></div><div className="col-12"><label className="form-label">Authors</label><select multiple className="form-select" value={authorIds} onChange={e=>setAuthorIds(Array.from(e.target.selectedOptions,o=>o.value))} size={Math.min(5,Math.max(2,authors.length))}>{authors.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select><div className="form-text">Use Ctrl/Cmd to select multiple authors.</div></div>{error&&<div className="col-12"><ErrorState message={error}/></div>}<div className="col-12 d-flex justify-content-end gap-2"><button type="button" className="btn btn-outline-secondary" onClick={onCancel}>Cancel</button><button className="btn btn-primary" disabled={saving}>{saving?"Saving…":"Save book"}</button></div></form>;
 }

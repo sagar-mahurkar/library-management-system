@@ -4,6 +4,7 @@ import { env } from "./config/env";
 import { AppDataSource } from "./config/data-source";
 import { provisionDatabaseIfNeeded } from "./config/database-provisioner";
 import { logger } from "./utils/logger";
+import { seedLibrarian } from "./scripts/seed-librarian";
 
 async function startServer(): Promise<void> {
   await provisionDatabaseIfNeeded();
@@ -11,6 +12,8 @@ async function startServer(): Promise<void> {
 
   // Apply versioned migrations; never use schema synchronization.
   await AppDataSource.runMigrations();
+
+  await seedLibrarian();
 
   const server = app.listen(env.PORT, () => {
     logger.info(`Server listening on port ${env.PORT}`);

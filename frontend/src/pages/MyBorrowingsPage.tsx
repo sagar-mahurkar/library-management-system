@@ -1,10 +1,2 @@
-import { useState } from "react";
-import BorrowingTable from "../components/BorrowingTable";
-import EmptyState from "../components/EmptyState";
-import PageHeader from "../components/PageHeader";
-import { mockBorrowings } from "../data/mockData";
-export default function MyBorrowingsPage() {
-  const [status, setStatus] = useState("all");
-  const rows = mockBorrowings.filter(b => b.studentName === "Aarav Sharma" && (status === "all" || b.status.toLowerCase() === status));
-  return <><PageHeader title="My borrowings" description="Current loans and previous returns." /><div className="d-flex justify-content-end mb-3"><select className="form-select" style={{ maxWidth: 220 }} value={status} onChange={e => setStatus(e.target.value)}><option value="all">All records</option><option value="active">Active</option><option value="overdue">Overdue</option><option value="returned">Returned</option></select></div><div className="card border-0 shadow-sm">{rows.length ? <BorrowingTable borrowings={rows} /> : <EmptyState title="No matching borrowings" />}</div></>;
-}
+import { useState } from "react"; import { useQuery } from "@tanstack/react-query"; import BorrowingTable from "../components/BorrowingTable"; import EmptyState from "../components/EmptyState"; import ErrorState from "../components/ErrorState"; import LoadingState from "../components/LoadingState"; import PageHeader from "../components/PageHeader"; import { listMyBorrowings } from "../services/borrowingsService";
+export default function MyBorrowingsPage() { const [status, setStatus] = useState<"all" | "active" | "overdue" | "returned">("all"); const query = useQuery({ queryKey: ["my-borrowings", status], queryFn: () => listMyBorrowings({ page: 1, limit: 50, status }) }); const rows = query.data?.items ?? []; return <><PageHeader title="My borrowings" description="Current loans and previous returns." /><div className="d-flex justify-content-end mb-3"><select className="form-select" style={{ maxWidth: 220 }} value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="all">All records</option><option value="active">Active</option><option value="overdue">Overdue</option><option value="returned">Returned</option></select></div><div className="card border-0 shadow-sm">{query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message="Unable to load borrowing history." /> : rows.length ? <BorrowingTable borrowings={rows} /> : <EmptyState title="No matching borrowings" />}</div></>; }

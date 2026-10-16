@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BookForm from "../components/forms/BookForm";
 import BookTable from "../components/BookTable";
 import PageHeader from "../components/PageHeader";
-import { mockBooks } from "../data/mockData";
-export default function ManageBooksPage() {
-  const [showForm, setShowForm] = useState(false);
-  return <><PageHeader title="Manage books" description="Maintain catalogue records." action={<button className="btn btn-primary" onClick={() => setShowForm(v => !v)}><i className="bi bi-plus-lg me-2" />Add book</button>} />
-    {showForm && <div className="card border-0 shadow-sm mb-4"><div className="card-body"><h2 className="h5">New book</h2><BookForm onCancel={() => setShowForm(false)} /></div></div>}
-    <div className="card border-0 shadow-sm"><div className="card-body"><BookTable books={mockBooks} onEdit={book => window.alert(`UI preview: edit ${book.title} in Phase 12.`)} onDelete={book => window.alert(`UI preview: delete ${book.title} in Phase 12.`)} /></div></div></>;
-}
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+import { createBook, deleteBook, listBooks, updateBook } from "../services/booksService";
+import { getApiErrorMessage } from "../services/apiHelpers";
+import type { Book, BookInput } from "../types/book.types";
+export default function ManageBooksPage(){const [books,setBooks]=useState<Book[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [formOpen,setFormOpen]=useState(false);const [editing,setEditing]=useState<Book>();const [refresh,setRefresh]=useState(0);useEffect(()=>{let active=true;listBooks({limit:100}).then(r=>{if(active)setBooks(r.items)}).catch(e=>{if(active)setError(getApiErrorMessage(e))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[refresh]);async function save(input:BookInput){if(editing)await updateBook(editing.id,input);else await createBook(input);setFormOpen(false);setEditing(undefined);setRefresh(v=>v+1)}async function remove(book:Book){if(!window.confirm(`Delete "${book.title}"?`))return;try{await deleteBook(book.id);setRefresh(v=>v+1);setError("")}catch(e){setError(getApiErrorMessage(e))}}return <><PageHeader title="Manage books" description="Maintain catalogue records." action={<button className="btn btn-primary" onClick={()=>{setEditing(undefined);setFormOpen(v=>!v)}}><i className="bi bi-plus-lg me-2"/>Add book</button>}/>{error&&<ErrorState message={error}/ >}{formOpen&&<div className="card border-0 shadow-sm mb-4"><div className="card-body"><h2 className="h5">{editing?"Edit book":"New book"}</h2><BookForm key={editing?.id??"new"} initialBook={editing} onSubmit={save} onCancel={()=>{setFormOpen(false);setEditing(undefined)}}/></div></div>}{loading?<LoadingState label="Loading books…"/>:books.length===0?<EmptyState title="No books found" message="Add the first book to the catalogue."/>:<div className="card border-0 shadow-sm"><div className="card-body"><BookTable books={books} onEdit={b=>{setEditing(b);setFormOpen(true)}} onDelete={remove}/></div></div>}</>}

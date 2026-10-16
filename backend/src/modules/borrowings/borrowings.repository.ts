@@ -2,6 +2,7 @@ import { AppDataSource } from "../../config/data-source";
 import { BookCopy } from "../../entities/book-copy.entity";
 import { Borrowing } from "../../entities/borrowing.entity";
 import { User } from "../../entities/user.entity";
+import type { SelectQueryBuilder } from "typeorm";
 import type { IssueBorrowingInput, ListBorrowingsQuery } from "./borrowings.schemas";
 export class BorrowingsRepository {
   async issue(input: IssueBorrowingInput) {
@@ -31,10 +32,17 @@ export class BorrowingsRepository {
     });
   }
   async listForStudent(studentId: string, query: ListBorrowingsQuery) {
+    return this.list(query, (qb) => qb.where("borrowing.user_id = :studentId", { studentId }));
+  }
+  async listAll(query: ListBorrowingsQuery) {
+    return this.list(query, (qb) => qb);
+  }
+  private async list(query: ListBorrowingsQuery, constrain: (qb: SelectQueryBuilder<Borrowing>) => SelectQueryBuilder<Borrowing>) {
     const qb = AppDataSource.getRepository(Borrowing).createQueryBuilder("borrowing")
       .leftJoinAndSelect("borrowing.bookCopy", "copy").leftJoinAndSelect("copy.book", "book")
-      .leftJoinAndSelect("borrowing.user", "user").where("borrowing.user_id = :studentId", { studentId })
-      .orderBy("borrowing.issuedAt", "DESC").skip((query.page - 1) * query.limit).take(query.limit);
+      .leftJoinAndSelect("borrowing.user", "user");
+    constrain(qb);
+    qb.orderBy("borrowing.issuedAt", "DESC").skip((query.page - 1) * query.limit).take(query.limit);
     if (query.status === "active") qb.andWhere("borrowing.returned_at IS NULL");
     if (query.status === "overdue") qb.andWhere("borrowing.returned_at IS NULL AND borrowing.due_at < CURRENT_TIMESTAMP");
     if (query.status === "returned") qb.andWhere("borrowing.returned_at IS NOT NULL");
