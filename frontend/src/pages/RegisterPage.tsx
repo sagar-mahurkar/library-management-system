@@ -1,0 +1,4 @@
+import RegisterForm from "../components/forms/RegisterForm";
+export default function RegisterPage() {
+  return <div className="card border-0 shadow-sm"><div className="card-body p-4 p-md-5"><h1 className="h3 mb-1">Create your account</h1><p className="text-secondary mb-4">Student registration for library members.</p><RegisterForm /><div className="alert alert-info small mt-4 mb-0">Public registration creates student accounts only. Librarian provisioning is controlled separately.</div></div></div>;
+}

@@ -1,12 +1,9 @@
 import axios from "axios";
+import { appConfig } from "../config/env";
 
-const apiUrl = import.meta.env.VITE_API_URL;
-const apiTimeout = Number(import.meta.env.VITE_API_TIMEOUT ?? 10000);
-
+// Configured for Phase 12 integration. Phase 11 pages intentionally use local mock data.
 export const apiClient = axios.create({
-  baseURL: apiUrl,
-  timeout: apiTimeout,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: appConfig.apiUrl,
+  timeout: appConfig.apiTimeout,
+  headers: { "Content-Type": "application/json" },
 });
